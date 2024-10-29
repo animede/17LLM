@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Chat with llama.cpp</title>
+    </head>
+    <body>
+        <div id="mainArea">
+            <div class="left" id="responses"></div>
+            <div class="right">
+                <div class="right-content">
+                    <div id="inputArea">
+                        <h4>メッセージ・質問・会話・指示</h6>
+                        <div>
+                            <label><input type="radio" name="character" value="char1"> キャラ1</label>
+                            <label><input type="radio" name="character" value="char2"> キャラ2</label>
+                            <label><input type="radio" name="character" value="char12"> みんなで雑談</label>
+                            <button onclick="conversationTerminate()">雑談終わり</button>
+                        </div>
+                        <textarea class="user-input"  type="text" id="inputText" placeholder="メッセージを書く"></textarea>
+                        <div id="nameArea">
+                            <h4 style="margin-top:15px;margin-left: 5px;">キャラ１</h6>
+                            <input type="text1" id="nameInput1" placeholder="名前">
+                            <h4 style="margin-top:15px;margin-left: 5px;">キャラ２</h6>
+                            <input type="text1" id="nameInput2" placeholder="名前">
+                            <h4 style="margin-top:15px;margin-left: 5px;">ユーザ</h6>
+                                <input type="text1" id="nameUser" placeholder="User">
+                            <h4 style="margin-top:15px;margin-left: 5px;">会話記憶数</h6>
+                            <input type="number" id="numberInput" min="0" max="20" placeholder="0-20">
+                        </div>
+                    </div>
+                    <div id="roleArea">
+                        <h4>キャラ１へのRole</h6>
+                        <textarea class="role-input" type="text" id="roleText" placeholder="LLMのロール"></textarea>
+                    </div>
+                    <div id="roleArea">
+                        <h4>キャラ２へのRole</h6>
+                        <textarea class="role-input" type="text" id="roleText2" placeholder="LLMのロール"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+
+<script>
+    const ws = new WebSocket("ws://127.0.0.1:8004/ws");
+    let isFirstResponse = true;  // フラグを初期化
+    const messagesContainer = document.getElementById('responses');  // コンテナを取得
+    let savedRoleMessage = "";  // roleMessageを保存するためのグローバル変数
+    let LastChank = "";
+    let lastMessage = "";
+    let conversationLogs = [];  // 会話ログを保存する配列
+    const defaultMaxLogs = 5;   // デフォルトの最大ログ数
+    let singleTurn = "";
+    let currentUserName = "";  // ユーザー名を保存するためのグローバル変数
+    let AutoConversationFlag = false;
+    let togle=false;
+
+    document.querySelectorAll('textarea').forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        }, false);
+    });
+
+    // Enterキーでメッセージを送信
+    document.getElementById('inputText').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {  // Shift + Enterで改行
+            const selected = document.querySelector('input[name="character"]:checked');
+            AutoConversationFlag=false;
+            if (selected) {
+                const character = selected.value;
+                console.log("+++++character=", character);}
+            event.preventDefault();  // ページリロード防止
+            const input=document.getElementById('inputText');
+            const nameU =  document.getElementById('nameUser');
+            if (selected.value === "char1") {
+                const role = document.getElementById('roleText');
+                const name =  document.getElementById('nameInput1');
+                sendMessage(input,role,name,nameU);}  // メッセージ送信
+            else if (selected.value === "char2") {
+                const role = document.getElementById('roleText2');
+                const name =  document.getElementById('nameInput2');
+                sendMessage(input,role,name,nameU);}  // メッセージ送信
+            else if (selected.value === "char12") {
+                const role = document.getElementById('roleText');   
+                const name =  document.getElementById('nameInput1');
+                sendMessage(input,role,name,nameU);  // メッセージ送信
+                AutoConversationFlag=true;
+                AutoConversation(input);}  // みんなで雑談開始
+            else {
+                alert("Please select a character.");
+                return;}
+        }
+    });
+
+    ws.onmessage = function(event) {
+        if (isFirstResponse) {
+            const initialDiv = document.createElement('div');
+            initialDiv.className = 'response-message assistant';  // Assistant message on the left
+            if (AutoConversationFlag !== true){
+                initialDiv.innerHTML = `<strong style="color: red;">${currentUserName}:</strong> `;}
+            else{
+                if (togle){
+                    initialDiv.innerHTML = `<strong style="color: red;">${currentUserName}:</strong> `;
+                    togle=false;}
+                else{
+                    initialDiv.innerHTML = `<strong style="color: green;">${currentUserName}:</strong> `;
+                    togle=true;}
+                }
+            messagesContainer.appendChild(initialDiv);
+            isFirstResponse = false;}
+        const lastMessageDiv = messagesContainer.lastElementChild;
+        if (lastMessageDiv && lastMessageDiv.classList.contains('response-message')) {
+            const span = document.createElement('span');
+            span.innerHTML = event.data;
+            lastMessageDiv.appendChild(span);
+            LastChank += event.data;} 
+        else {
+            const newMessageDiv = document.createElement('div');
+            newMessageDiv.className = 'response-message assistant';  // Assistant message on the left
+            newMessageDiv.innerHTML = event.data;
+            messagesContainer.appendChild(newMessageDiv);
+            LastChank += event.data;}
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    };
+
+    function conversationTerminate(){
+        console.log("+++++conversationTerminate");
+        AutoConversationFlag=false;
+        console.log("+++++conversationTerminate", AutoConversationFlag);
+    };
+
+    async function AutoConversation(input){
+        let inputa=input;
+        while (AutoConversationFlag === true){
+            const role = document.getElementById('roleText');
+            const name =  document.getElementById('nameInput1');
+            const role2 = document.getElementById('roleText2');
+            const name2 =  document.getElementById('nameInput2');
+            await sendMessage(inputa,role,name,name2);  // メッセージ送信
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            let inputb=lastMessage
+            await sendMessage(inputb,role2,name2,name);  // メッセージ送信  2回目
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            inputa=lastMessage;
+        }
+    }; 
+
+    function sendMessage(input,role,name_selected,name_user) {
+        let message;
+        if (typeof input === 'string') {   // input がテキスト文字列の場合
+            message = input;               // input が文字列ならそのまま使用
+        } else {                           // input がDOM要素の場合
+            const inputElement = input;
+            message = inputElement.value;  // inputElement の .value を取得
+        }
+        console.log("+++++INPUTmessage=", message);
+        const inputElement = input;
+        const roleElement = role;
+        const numberElement = document.getElementById('numberInput');
+        const nameElement = name_selected;
+        const name = nameElement.value.trim();
+        const name_uElement=name_user;
+        const name_u = name_uElement.value.trim();       
+        let roleMessage = roleElement.value.trim();
+    
+        if (!message.trim() && !name.trim()) {
+            alert("Please enter llm name and a message.");
+            return;}
+        if (roleMessage === "") {
+            roleMessage = savedRoleMessage;} 
+        else {
+            savedRoleMessage = roleMessage;}
+        currentUserName = name;
+        console.log("+++++currentUserName=", currentUserName);  
+        if (message.trim() === "" && roleMessage === "") return;
+        if (lastMessage !== "") {
+            singleTurn = 'user:' + lastMessage + 'response:' + LastChank;};
+        lastMessage = LastChank;
+        LastChank = "";
+
+        console.log("+++++RESPONCERmessage=", lastMessage);
+        const conv_log = addLog(singleTurn);
+        const NewPrompt = conv_log + 'user:' + message;
+        if (AutoConversationFlag !== true){
+            const userDiv = document.createElement('div');
+            userDiv.className = 'user-message';  // User message on the right
+            userDiv.innerHTML = `<strong style="color: blue;">${name_u}:</strong> ${message}`;
+            messagesContainer.appendChild(userDiv);
+            }
+        ws.send(JSON.stringify({ message: NewPrompt, role: roleMessage }));
+        inputElement.value = '';
+        isFirstResponse = true;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function addLog(message) {
+        const maxLogCount = document.getElementById('numberInput').value || defaultMaxLogs;
+        const logEntry = { message };
+        conversationLogs.push(logEntry);
+        if (conversationLogs.length > maxLogCount) {
+            conversationLogs.shift();}
+        return conversationLogs.map(log => log.message).join('\n');
+    }
+</script>
+
+<style>
+    body {
+      display: flex;
+      flex-direction: row; /* 横並び */
+      justify-content: space-between; /* 要素間のスペースを調整 */
+      margin: 0;
+      padding: 20px;
+      height: 100vh; /* ビューポートの高さに合わせる */
+    }
+    .left {
+      padding: 20px;
+      background-color: #f0f0f0;
+      margin: 10px;
+    }
+    .left {
+      flex-grow: 2; /* 左の要素が大きくなるように設定 */
+      flex-basis: 60%; /* 基本的に左側の幅を70%に設定 */
+    }
+    .right {
+      flex-grow: 1; /* 右の要素が小さくなるように設定 */
+      flex-basis: 40%; /* 基本的に右側の幅を30%に設定 */
+    }
+    .right-content {
+        padding-right: 20px;
+        padding-top: 10px;
+        background-color: lightblue; /* 右側の要素に合わせた背景色 */
+        }
+
+    #mainArea {
+        display: flex;
+        width: 100%;}
+    #inputArea, #roleArea {
+        width: 100%;
+        padding: 10px;
+        padding-top:0px;
+        margin-top:-20px;
+        padding-right:10px; }
+    #roleArea {
+        width: 100%;
+        padding: 10px;
+        padding-top:0px;
+        margin-top:-20px;
+        padding-right:10px; }
+    #nameArea {
+        display: flex;
+        width: 100%;}
+    .user-input{
+        height: 50px;
+        }
+    .role-input{
+        height: 150px;
+    }
+    textarea, input[type="text"], input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        margin-bottom: 5px;
+        font-size: 18px;}
+
+    input, input[type="text1"], input[type="number"] {
+        width: 13%;
+        padding-top: 10px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+        box-sizing: border-box;
+          font-size: 18px;}
+
+    h4 {margin-bottom: 5px;}
+    #responses {
+        width: 65%;
+        height: 800px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 0px;
+        margin-top:0px;
+        background-color: #f9f9f9;
+        white-space: pre-wrap;}
+    .user-message, .response-message {
+        margin: 5px 0;
+        padding: 10px;
+        border-radius: 10px;}
+    .user-message {
+        background-color: #d1ecf1;
+        text-align: right;
+        margin-left: auto;
+        width: fit-content;
+        max-width: 80%;}
+    .response-message {
+        background-color: #f8d7da;
+        text-align: left;
+        margin-right: auto;
+        width: fit-content;
+        max-width: 80%;}
+
+</style>

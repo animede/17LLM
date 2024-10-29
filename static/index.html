@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Chat with llama.cpp</title>
+    </head>
+    <body>
+        <h1>Chat with llama.cpp</h1>
+        <div id="mainArea">
+            <pre id="responses"></pre>
+            <div>
+                <div id="roleArea">
+                    <h6>LLMへのRole</h6>
+                    <textarea type="text" id="roleText" placeholder="Role to LLM..."></textarea>
+                </div>
+                <div id="inputArea">
+                    <h6>LLMへのメッセジ・質問・会話・指示</h6>
+                    <textarea type="text" id="inputText" placeholder="Type your message..."></textarea>
+                    <button onclick="sendMessage()">Send</button>
+                    <h6>会話ターン記憶数</h6>
+                    <input type="number" id="numberInput" min="0" max="20" placeholder="0-20">
+                    <h6>LLMの名前</h6>
+                    <input type="text" id="nameInput" placeholder="Enter llm name">
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+
+<script>
+    const ws = new WebSocket("ws://127.0.0.1:8002/ws");
+    //const ws = new WebSocket("ws://192.168.11.70:8002/ws");
+    let isFirstResponse = true;  // フラグを初期化
+    const messagesContainer = document.getElementById('responses');  // コンテナを取得
+    let savedRoleMessage = "";  // roleMessageを保存するためのグローバル変数
+    let LastChank="";
+    let lastMessage="";
+    let conversationLogs = [];  // 会話ログを保存する配列
+    const defaultMaxLogs = 5;   // デフォルトの最大ログ数
+    let singleTurn="";
+    let currentUserName = "";  // ユーザー名を保存するためのグローバル変数
+
+    document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            }, false);
+        });
+
+    ws.onmessage = function(event) {
+        if (isFirstResponse) {
+            // 最初の応答に "Response:" を挿入、これを赤く表示（改行なし）
+            const initialDiv = document.createElement('div');
+            initialDiv.className = 'response-message';  // CSSクラスを適用
+            initialDiv.innerHTML = `<strong style="color: red;">${currentUserName}:</strong> `;
+            messagesContainer.appendChild(initialDiv);
+            isFirstResponse = false;
+        }
+        // 既存の最後のdivに受信データを追加（改行を保持しながら）
+        const lastMessageDiv = messagesContainer.lastElementChild;
+        if (lastMessageDiv && lastMessageDiv.classList.contains('response-message')) {
+            const span = document.createElement('span'); // 新しい span 要素を作成
+            span.innerHTML = event.data;  // 受信データを追加
+            lastMessageDiv.appendChild(span);  // 最後の div に span を追加
+            LastChank +=event.data;
+         } else {
+            const newMessageDiv = document.createElement('div');
+            newMessageDiv.className = 'response-message';
+            newMessageDiv.innerHTML = event.data;  // 新しいデータブロックとして追加
+            messagesContainer.appendChild(newMessageDiv);
+            lastReceivedChunk +=event.data;
+            LastChank +=event.data;
+        }
+        // スクロール位置を最新のメッセージに合わせる
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    };
+
+    function sendMessage() {
+        const inputElement = document.getElementById('inputText');
+        const roleElement = document.getElementById('roleText');
+        const numberElement = document.getElementById('numberInput');
+        const nameElement = document.getElementById('nameInput');
+        const name = nameElement.value.trim();
+        const message = inputElement.value;
+        let roleMessage = roleElement.value.trim();
+    
+        if (!message.trim() && !name.trim()) {
+            alert("Please enter llm name and a message.");
+            return; // 名前とメッセージの両方が空の場合は警告を表示
+        }
+
+        // 新しいroleMessageがあれば更新し、なければ最後に保存された値を使用
+        if (roleMessage === "") {
+            roleMessage = savedRoleMessage;
+        } else {
+            savedRoleMessage = roleMessage;  // 新しい値でグローバル変数を更新
+        }
+        currentUserName = name;  // ユーザー名をグローバル変数に保存
+        if (message.trim() === "" && roleMessage === "") return; // メッセージが空の場合は送信しない
+        if (lastMessage  !=""){
+            singleTurn='user:' + lastMessage  +'response:' + LastChank;
+            console.log("+++++singleTurn=",singleTurn)
+            }
+        LastChank="";//LastChankをクリア
+        lastMessage=message//lastMessageに今回のメッセージを保存
+        conv_log=addLog(singleTurn)//記憶用の過去ログを取得
+        const NewPrompt=conv_log + 'user:' + message 
+        //console.log("+++++NewPrompt= ",NewPrompt);
+        const userDiv = document.createElement('div');
+        userDiv.className = 'user-message';  // ユーザーメッセージのCSSクラスを適用
+        userDiv.innerHTML = `<strong style="color: blue;">User:</strong> ${message}`;
+        messagesContainer.appendChild(userDiv);
+
+        ws.send(JSON.stringify({ message: NewPrompt, role: roleMessage }));
+        inputElement.value = '';
+        isFirstResponse = true;  // メッセージ送信後、次のレスポンスを初回として扱う
+        // 送信後もスクロール位置を調整
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    function addLog(message) {
+        const maxLogCount = document.getElementById('numberInput').value || defaultMaxLogs;
+        const logEntry = { message };
+        conversationLogs.push(logEntry);
+        if (conversationLogs.length > maxLogCount) {
+            conversationLogs.shift();  // 一番古いログを削除
+        }
+        //console.info('+++++lOGLIST=', conversationLogs)
+        // conversationLogs内のメッセージを改行で結合して返す
+        return conversationLogs.map(log => log.message).join('\n');
+    }
+</script>
+
+<style>
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 20px;
+    }
+    #mainArea {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+    }
+    #inputArea {
+        width: 80%;
+        padding: 10px;
+        margin-top: -20px;
+        margin-right: 20px;  /* 右側に20pxのマージンを追加 */
+        margin-left: 10px;  /* 右側に20pxのマージンを追加 */
+    }
+    #roleArea {
+        width: 80%;
+        padding: 10px;
+        margin-top: -20px;
+        margin-right: 20px;  /* 右側に20pxのマージンを追加 */
+        margin-left: 10px;  /* 右側に20pxのマージンを追加 */
+    }
+    #inputText {
+        width: 100%;
+        padding: 10px;
+        margin-bottom:10px;
+        font-size: 10px; /* フォントサイズを小さく設定 */
+    }
+    textarea, input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box; /* パディングとボーダーを幅に含める */
+            margin-bottom: 5px; /* 下のマージンを小さく設定 */
+    }
+    h6 {
+            margin-bottom: 5px; /* 下のマージンを小さく設定 */
+    }
+    #roleText {
+        width: 100%;
+        height: 100px;
+        padding: 10px;
+        margin-bottom: 0px;
+        font-size: 10px; /* フォントサイズを小さく設定 */
+    }
+    #responses {
+        width: 65%;
+        height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        white-space: pre-wrap;
+        background-color: #f9f9f9;
+    }
+    button {
+        width: 60px;
+        height: 30px;
+
+    }
+    .user-message {
+        color: blue;
+    }
+    .response-message {
+        color: black;
+    }
+    #numberInput {
+        width: 60px;
+        padding: 8px;
+        margin-top: 0px;
+        box-sizing: border-box; /* パディングを幅に含める */
+    }
+    .black-message {
+        color: black;
+    }
+    #responses {
+        width: 65%;
+        height: 410px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        background-color: #f9f9f9;
+        white-space: pre-wrap; /* 改行と空白を保持 */
+    }
+    .user-message strong {
+        color: #0000ff;  // ラベルの色を赤にする
+    }
+</style>
+
