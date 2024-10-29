@@ -21,10 +21,15 @@ llama.cppによるOpenAI互換サーバと様々なクライアントを動か�
   https://huggingface.co/bartowski/gemma-2-9b-it-GGUF
   から
   gemma-2-9b-it-Q4_K_M.gguf
+
+　https://huggingface.co/bartowski/gemma-2-27b-it-GGUF　
+　から
   gemma-2-27b-it-IQ2_M.gguf
+
   https://huggingface.co/bartowski/gemma-2-2b-jpn-it-GGUF
   から
   gemma-2-2B-jpn-it-Q4_K_M.gguf
+
   をダウンロード どちらも16GbyteのGPUメモリー又はCPUで動きます。
 
   lama3-2シリーズ
