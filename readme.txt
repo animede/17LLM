@@ -16,6 +16,9 @@ llama.cppによるOpenAI互換サーバと様々なクライアントを動か�
    pip install fastapi
    pip install gradio
 
+このリポジトリのクローン
+  git clone git@github.com:animede/17LLM.git
+
 2,　モデルのダウンロード
   gemma-2シリーズ
   https://huggingface.co/bartowski/gemma-2-9b-it-GGUF
