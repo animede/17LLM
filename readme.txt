@@ -23,7 +23,9 @@ NVCC -V
    python3.11 -m venv llama
    source llama/bin/activate
   
-  構築 (cmakeが無いというエラーが出るときはメッセージに従いcmakeをインストール）
+  構築
+　　　(cmakeが無いというエラーが出るときはメッセージに従いcmakeをインストール
+　　　sudo apt install cmake ）
    cmake -B build -DGGML_CUDA=ON
    cmake --build build --config Release
     すごく時間がかかります
