@@ -91,9 +91,10 @@ NVCC -V
 　2）会話テスト
 　   会話が出来ます。
 　   
-　  python python openai_conv_test.py
+　  python openai_conv_test.py
 　
 　3)シンプルなGUI
+    FireFoxのバージョンによっては正確に動かない場合があるようです。動かない場合はChromeでサクセスしてください
 　
 　  python openai_gradio.py
 　  
