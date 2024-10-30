@@ -1,5 +1,19 @@
 llama.cppによるOpenAI互換サーバと様々なクライアントを動かします。
 
+事前にCUDA-Toolkitをインストールしてください
+
+https://developer.nvidia.com/cuda-downloads
+環境を選ぶとインストールコマンドが表示されるのでそのままコピペします。networkインストールが楽だと思います
+
+パスを通しておきましょう（よく忘れます）
+export PATH=/usr/local/cuda:/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+source ~/.bashrc
+
+確認
+NVCC -V
+
+
 1,　llama.cppのインストール
   仮想環境作成
    git clone https://github.com/ggerganov/llama.cpp.git
@@ -8,11 +22,12 @@ llama.cppによるOpenAI互換サーバと様々なクライアントを動か�
   
   構築 (cmakeが無いというエラーが出るときはメッセージに従いcmakeをインストール）
    cmake -B build -DGGML_CUDA=ON
-　 cmake --build build --config Release
-　 cd llama.cpp
+   cmake --build build --config Release
+    すごく時間がかかります
+   cd llama.cpp
 　
 　モジュールのインストール
-　 pip install openai
+   pip install openai
    pip install fastapi
    pip install gradio
 
