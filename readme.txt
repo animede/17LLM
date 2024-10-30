@@ -1,15 +1,15 @@
 llama.cppによるOpenAI互換サーバと様々なクライアントを動かします。
 
 1,　llama.cppのインストール
-    仮想環境作成
-  git clone https://github.com/ggerganov/llama.cpp.git
-  python3.11 -m venv llama
-  source llama/bin/activate
+  仮想環境作成
+   git clone https://github.com/ggerganov/llama.cpp.git
+   python3.11 -m venv llama
+   source llama/bin/activate
   
-    構築
-  cmake -B build -DGGML_CUDA=ON
-　cmake --build build --config Release
-　cd llama.cpp
+  構築 (cmakeが無いというエラーが出るときはメッセージに従いcmakeをインストール）
+   cmake -B build -DGGML_CUDA=ON
+　 cmake --build build --config Release
+　 cd llama.cpp
 　
 　モジュールのインストール
 　 pip install openai
@@ -17,7 +17,7 @@ llama.cppによるOpenAI互換サーバと様々なクライアントを動か�
    pip install gradio
 
 このリポジトリのクローン
-  git clone git@github.com:animede/17LLM.git
+  git clone https://github.com/animede/17LLM.git
 
 2,　モデルのダウンロード
   gemma-2シリーズ
