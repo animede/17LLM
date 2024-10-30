@@ -26,6 +26,8 @@ NVCC -V
     すごく時間がかかります
    cd llama.cpp
 　
+  build/binフォルダのbinファイルへパスを通すか生成された全てのbinファイルをリポジトリのルートにコピー
+　
 　モジュールのインストール
    pip install openai
    pip install fastapi
