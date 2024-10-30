@@ -15,6 +15,9 @@ NVCC -V
 
 
 1,　llama.cppのインストール
+   仮想環境作成の準備
+　 sudo apt install python3.11-venv
+
   仮想環境作成
    git clone https://github.com/ggerganov/llama.cpp.git
    python3.11 -m venv llama
